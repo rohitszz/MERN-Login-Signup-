@@ -106,7 +106,6 @@ const decoded = jwt.verify(token, process.env.JWT_SECRET);
         alphabets:false,
     })
 
-
     let transporter = nodemailer.createTransport(
         {
             host: process.env.MAIL_HOST,
@@ -116,7 +115,6 @@ const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 user: process.env.MAIL_USER,
                 pass: process.env.MAIL_PASS,
             }
-
         }
     )
 
@@ -148,16 +146,18 @@ const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
 exports.verifyOtp = async (req, res) => {
     try{
-    
     const { otp } = req.body;
-   const authHeader = req.headers.authorization;
-if (!authHeader) 
+    const authHeader = req.headers.authorization;
+    if (!authHeader) 
     return res.status(400).json({ message: "Missing token" });
 
-const token = authHeader.split(" ")[1];  
-const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = authHeader.split(" ")[1];  
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const copyEmail = decoded.email;
+    if (!tempStorage[copyEmail]) {
+  return res.status(400).json({ message: "Signup session expired" });
+}
     const oldotp = tempStorage[copyEmail].otp;
     
     if (!oldotp) return res.status(400).json({ message: "OTP not generated" });
@@ -165,10 +165,23 @@ const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!copyEmail) {
             return res.status(400).json({ success: false, message: "Email missing" });
         }
-   
     
     if( oldotp === String(otp) ){
         if( !(await signup(copyEmail))){return res.status(400).json({ success: false, message: "user already exists" });}
+        const signupToken = jwt.sign(
+            { email: copyEmail},
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        )
+
+        res.cookie("signupAuthToken", signupToken, {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax", 
+            path:"/", 
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        })
+        
         delete tempStorage[copyEmail];
         return res.status(200).json({
             success: true,
