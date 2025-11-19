@@ -45,6 +45,7 @@ const Otp = ({copyEmail, setcopyEmail, otpVerified, setOtpVerified}) => {
     const res = await fetch("http://localhost:5000/api/users/signup/verifyotp", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`},
+        credentials: "include", 
         body: JSON.stringify({
          otp ,copyEmail })
     })
